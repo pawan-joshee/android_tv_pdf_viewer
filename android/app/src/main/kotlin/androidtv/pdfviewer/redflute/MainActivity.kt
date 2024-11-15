@@ -98,6 +98,7 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "checkStoragePermission" -> checkStoragePermission(result)
+                "handleManageExternalStoragePermission" -> handleManageExternalStoragePermission(result)
                 else -> result.notImplemented()
             }
         }
@@ -400,41 +401,43 @@ class MainActivity : FlutterActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == REQUEST_CODE_PICK_PDF) {
-            if (resultCode == RESULT_OK && data != null) {
-                val uri: Uri? = data.data
-                if (uri != null) {
-                    try {
-                        // Take persistent permissions for future access
-                        val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                        contentResolver.takePersistableUriPermission(uri, takeFlags)
+        when (requestCode) {
+            REQUEST_CODE_MANAGE_EXTERNAL_STORAGE -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (Environment.isExternalStorageManager()) {
+                        pendingResult?.success("granted")
+                    } else {
+                        pendingResult?.success("denied")
+                    }
+                    pendingResult = null
+                }
+            }
+            REQUEST_CODE_PICK_PDF -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    val uri: Uri? = data.data
+                    if (uri != null) {
+                        try {
+                            // Take persistent permissions for future access
+                            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            contentResolver.takePersistableUriPermission(uri, takeFlags)
 
-                        // Convert URI to file path
-                        val filePath = getFilePathFromUri(uri)
-                        if (filePath != null) {
-                            Log.d(TAG, "Picked file path: $filePath")
-                            pendingResult?.success(filePath)
-                        } else {
-                            pendingResult?.error("PATH_ERROR", "Could not resolve file path", null)
+                            // Convert URI to file path
+                            val filePath = getFilePathFromUri(uri)
+                            if (filePath != null) {
+                                Log.d(TAG, "Picked file path: $filePath")
+                                pendingResult?.success(filePath)
+                            } else {
+                                pendingResult?.error("PATH_ERROR", "Could not resolve file path", null)
+                            }
+                        } catch (e: Exception) {
+                            pendingResult?.error("PERMISSION_ERROR", "Error getting file permissions: ${e.message}", null)
                         }
-                    } catch (e: Exception) {
-                        pendingResult?.error("PERMISSION_ERROR", "Error getting file permissions: ${e.message}", null)
+                    } else {
+                        pendingResult?.error("NO_URI", "No file URI received", null)
                     }
                 } else {
-                    pendingResult?.error("NO_URI", "No file URI received", null)
-                }
-            } else {
-                pendingResult?.error("CANCELLED", "File picking was cancelled", null)
-            }
-            pendingResult = null
-        }
-        if (requestCode == REQUEST_CODE_MANAGE_EXTERNAL_STORAGE) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (Environment.isExternalStorageManager()) {
-                    pendingResult?.success("granted")
-                } else {
-                    pendingResult?.success("denied")
+                    pendingResult?.error("CANCELLED", "File picking was cancelled", null)
                 }
                 pendingResult = null
             }
@@ -536,6 +539,23 @@ class MainActivity : FlutterActivity() {
             else -> {
                 result.success("granted")
             }
+        }
+    }
+
+    // Step 1: Add a method to check and request MANAGE_EXTERNAL_STORAGE permission
+    private fun handleManageExternalStoragePermission(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                pendingResult = result
+                startActivityForResult(intent, REQUEST_CODE_MANAGE_EXTERNAL_STORAGE)
+            } else {
+                result.success("granted")
+            }
+        } else {
+            result.success("not_required")
         }
     }
 }

@@ -16,7 +16,7 @@ dependencies:
   flutter:
     sdk: flutter
   shimmer: ^3.0.0
-# NO NEED TO USE PACKAGES FOR SHITTY THINGS
+# Prefer using plugins over packages for improved performance on low-end devices
 
 # Development Dependencies
 dev_dependencies:

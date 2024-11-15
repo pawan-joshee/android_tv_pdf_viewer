@@ -2,7 +2,6 @@
 
 import 'dart:developer';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +12,9 @@ import '../services/permission_handler.dart';
 import '../theme/theme.dart';
 import '../utils/custom_page_route.dart';
 import '../widgets/animated_icon_widget.dart';
+import '../widgets/directory_tile_widget.dart';
 import '../widgets/pulsating_circle_widget.dart';
+import '../widgets/tv_button_widget.dart';
 import 'pdf_list_screen.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen>
   // Enhanced focus management
   final FocusNode _pickPdfFocusNode = FocusNode();
   final FocusNode _settingsFocusNode = FocusNode();
+  final FocusNode _manageStorageFocusNode = FocusNode();
   final Map<int, FocusNode> _directoryFocusNodes = {};
 
   // Enhanced animations
@@ -100,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
     _settingsFocusNode.removeListener(_handleFocusChange);
     _pickPdfFocusNode.dispose();
     _settingsFocusNode.dispose();
+    _manageStorageFocusNode.dispose();
     for (var node in _directoryFocusNodes.values) {
       node.dispose();
     }
@@ -304,6 +307,11 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Future<void> _requestManageStoragePermission() async {
+    await _permissionHandler.handleManageExternalStoragePermission();
+    await _checkAndLoadDirectories();
+  }
+
   @override
   Widget build(BuildContext context) {
     final customColors = Theme.of(context).extension<CustomColors>();
@@ -388,98 +396,24 @@ class _HomeScreenState extends State<HomeScreen>
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildTVButton(
+                  TVButtonWidget(
                     icon: Icons.settings,
                     label: 'Settings',
                     focusNode: _settingsFocusNode,
                     onPressed: _permissionHandler.openAppSettings,
                   ),
                   const SizedBox(width: 16),
-                  _buildTVButton(
+                  TVButtonWidget(
                     icon: Icons.picture_as_pdf,
                     label: 'Pick PDF',
                     focusNode: _pickPdfFocusNode,
                     onPressed: _pickPdf,
                     isPrimary: true,
                   ),
+                  const SizedBox(width: 16),
                 ],
               ),
             ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTVButton({
-    required IconData icon,
-    required String label,
-    required FocusNode focusNode,
-    required VoidCallback onPressed,
-    bool isPrimary = false,
-  }) {
-    return FocusableActionDetector(
-      focusNode: focusNode,
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          onPressed();
-          return null;
-        }),
-      },
-      child: AnimatedBuilder(
-        animation: focusNode,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: focusNode.hasFocus ? 1.1 : 1.0,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              decoration: BoxDecoration(
-                color: isPrimary
-                    ? (focusNode.hasFocus
-                        ? Colors.purple[400]?.withOpacity(0.9)
-                        : Colors.purple[600])
-                    : (focusNode.hasFocus
-                        ? Colors.purple[700]?.withOpacity(0.9)
-                        : Colors.purple[900]),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: focusNode.hasFocus
-                    ? [
-                        BoxShadow(
-                          color: Colors.purple.withOpacity(0.7),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        )
-                      ]
-                    : [
-                        const BoxShadow(
-                          color: Colors.transparent,
-                        )
-                      ],
-                border: isPrimary
-                    ? Border.all(color: Colors.white, width: 2)
-                    : null,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedRotation(
-                    turns: focusNode.hasFocus ? 0.05 : 0.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(icon, color: Colors.white, size: 30),
-                  ),
-                  const SizedBox(width: 14),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           );
         },
       ),
@@ -571,7 +505,12 @@ class _HomeScreenState extends State<HomeScreen>
                     _directoryFocusNodes[index] ??= FocusNode()
                       ..addListener(_handleFocusChange);
 
-                    return _buildDirectoryTile(directory, index);
+                    return DirectoryTileWidget(
+                      directory: directory,
+                      focusNode: _directoryFocusNodes[index]!,
+                      onNavigate: () =>
+                          _navigateToPdfListScreen(context, directory.path),
+                    );
                   },
                 ),
               ),
@@ -579,113 +518,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDirectoryTile(Directory directory, int index) {
-    return FocusableActionDetector(
-      focusNode: _directoryFocusNodes[index],
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            _navigateToPdfListScreen(context, directory.path);
-            return null;
-          },
-        ),
-      },
-      child: AnimatedBuilder(
-        animation: _directoryFocusNodes[index]!,
-        builder: (context, child) {
-          final isFocused = _directoryFocusNodes[index]!.hasFocus;
-
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Transform.scale(
-              scale: isFocused ? 1.05 : 1.0,
-            ).transform,
-            decoration: BoxDecoration(
-              color: isFocused
-                  ? Colors.purple[600]?.withOpacity(0.9)
-                  : Colors.purple[900]?.withOpacity(0.4),
-              borderRadius: BorderRadius.circular(20),
-              border: isFocused
-                  ? Border.all(color: Colors.purple[300]!, width: 2)
-                  : null,
-              boxShadow: isFocused
-                  ? [
-                      BoxShadow(
-                        color: Colors.purple.withOpacity(0.3),
-                        blurRadius: 15,
-                        spreadRadius: 2,
-                      )
-                    ]
-                  : null,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: EdgeInsets.all(isFocused ? 12 : 8),
-                        decoration: BoxDecoration(
-                          color: isFocused
-                              ? Colors.purple[300]
-                              : Colors.purple[700],
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Icon(
-                          Icons.folder,
-                          color: Colors.white,
-                          size: isFocused ? 40 : 36,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              directory.path.split('/').last.toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isFocused ? 26 : 24,
-                                fontWeight: isFocused
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                            if (isFocused) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Press OK to view PDFs',
-                                style: TextStyle(
-                                  color: Colors.purple[100],
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: isFocused ? 40 : 36,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
@@ -735,6 +567,12 @@ class _HomeScreenState extends State<HomeScreen>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
+                  TVButtonWidget(
+                    icon: Icons.storage,
+                    label: 'Manage Storage',
+                    focusNode: _manageStorageFocusNode,
+                    onPressed: _requestManageStoragePermission,
+                  ),
                 ],
               ),
             ),
@@ -773,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             const SizedBox(height: 40),
-            _buildTVButton(
+            TVButtonWidget(
               icon: Icons.add,
               label: 'Pick PDF',
               focusNode: _pickPdfFocusNode,

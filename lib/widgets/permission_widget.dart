@@ -47,13 +47,13 @@ class PermissionHandler {
     }
   }
 
-  Future<String?> handleManageExternalStoragePermission() async {
+  Future<String> handleManageExternalStoragePermission() async {
     try {
-      final String? status =
+      final String status =
           await _channel.invokeMethod('handleManageExternalStoragePermission');
       return status;
     } on PlatformException {
-      return null;
+      return 'unknown';
     }
   }
 
@@ -131,19 +131,33 @@ class _PermissionWidgetState extends State<PermissionWidget>
     }
   }
 
+  Future<void> _handlePermissionStatus(PermissionStatus status) async {
+    switch (status) {
+      case PermissionStatus.denied:
+        final requestStatus =
+            await _permissionHandler.requestStoragePermission();
+        setState(() => _status = requestStatus);
+        break;
+      case PermissionStatus.permanentlyDenied:
+        await _permissionHandler.handleManageExternalStoragePermission();
+        // Optionally update the UI based on the new status
+        final updatedStatus = await _permissionHandler.checkStoragePermission();
+        setState(() => _status = updatedStatus);
+        break;
+      default:
+        setState(() => _status = status);
+    }
+  }
+
   Future<void> _checkPermission() async {
     if (_isChecking) return;
 
     setState(() => _isChecking = true);
     try {
       final status = await _permissionHandler.checkStoragePermission();
-      if (status == PermissionStatus.denied) {
-        // Request permission explicitly if denied
-        final requestStatus =
-            await _permissionHandler.requestStoragePermission();
-        if (mounted) {
-          setState(() => _status = requestStatus);
-        }
+      if (status == PermissionStatus.denied ||
+          status == PermissionStatus.permanentlyDenied) {
+        await _handlePermissionStatus(status);
       } else {
         setState(() => _status = status);
       }
