@@ -37,6 +37,19 @@ The first and only open-source PDF viewer specifically designed for Android TV. 
 - Minimal dependencies for better performance
 - Supports various PDF formats
 
+## 💻 Technologies Used
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
+[![Android TV](https://img.shields.io/badge/Android_TV-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://android.com/tv)
+[![Material Design](https://img.shields.io/badge/Material_Design-757575?style=for-the-badge&logo=material-design&logoColor=white)](https://material.io)
+[![PDF](https://img.shields.io/badge/PDF_Processing-EC1C24?style=for-the-badge&logo=adobe-acrobat-reader&logoColor=white)](https://en.wikipedia.org/wiki/PDF)
+
+- **Flutter**: Core framework for cross-platform development
+- **Dart**: Programming language optimized for building user interfaces
+- **Android TV**: Platform-specific optimizations and navigation
+- **Material Design**: UI components adapted for TV interfaces
+- **PDF Processing**: Custom rendering and handling of PDF documents
+
 ## 🤝 Contributing
 We welcome contributions! Here's how you can help:
 - 🐛 Report bugs and issues
@@ -60,3 +73,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If this project helps you, please consider giving it a star to show your support!
 
 Keywords: Android TV PDF Reader, PDF Viewer for Android TV, Flutter, Open Source, TV App, PDF Reader, Large Screen PDF on TV
+
+APK will only be installable on Android TV device - flutter build apk --release --target-platform android-arm64 --flavor tv

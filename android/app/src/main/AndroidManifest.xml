@@ -12,7 +12,7 @@
     <!-- Add media-specific permissions if necessary -->
 
     <!-- Set required to true if the app is exclusively for Android TV -->
-    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <queries>

@@ -15,7 +15,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shimmer: ^3.0.0
 # Prefer using plugins over packages for improved performance on low-end devices
 
 # Development Dependencies
